@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://abroady.netlify.app/sitemap.xml

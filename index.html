@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- ============================================================
+       ABROADY — main page (single-page app)
+       Every "page" is a <section class="view"> below. script.js shows one
+       at a time based on the address (#home, #clubs, #about …).
+       Text with data-i18n="key" is translated by i18n.js.
+       ============================================================ -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Abroady — Your Global Campus Starts Here</title>
+  <meta name="description" content="Abroady helps first-year and international students settle in, find their people, and study abroad early. Orientation checklist, club directory and peer matching." />
+  <meta name="theme-color" content="#4B9CD3" />
+
+  <!-- ===== Logo in Google, browser tabs and phone home screens =====
+       👉 After you publish on Netlify, replace https://abroady.netlify.app
+          everywhere in this file (and in robots.txt / sitemap.xml) with your real address. -->
+  <link rel="canonical" href="https://abroady.netlify.app/" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="48x48" href="favicon-48x48.png" />
+  <link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="manifest" href="site.webmanifest" />
+
+  <!-- Preview card when the link is shared on WhatsApp, Instagram, LinkedIn… -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Abroady" />
+  <meta property="og:title" content="Abroady — Your Global Campus Starts Here" />
+  <meta property="og:description" content="Orientation, clubs and study-abroad peers for first-year and international students." />
+  <meta property="og:url" content="https://abroady.netlify.app/" />
+  <meta property="og:image" content="https://abroady.netlify.app/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Structured data: tells Google the site name and which image is the logo -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      { "@type": "Organization", "name": "Abroady", "url": "https://abroady.netlify.app/",
+        "logo": "https://abroady.netlify.app/icon-512.png",
+        "founder": { "@type": "Person", "name": "Monica Macaes" } },
+      { "@type": "WebSite", "name": "Abroady", "url": "https://abroady.netlify.app/" }
+    ]
+  }
+  </script>
+
+  <!-- Fonts (Inter) are loaded by script.js ONLY after the visitor accepts
+       optional cookies, because Google Fonts is a third-party service.
+       Until then the app uses the system font. -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="topbar">
+    <div class="topbar__inner">
+      <a href="#home" class="brand" aria-label="Abroady">
+        <img src="logo.png" alt="" class="brand__logo" width="46" height="38" />
+        <span class="brand__name">Abroady</span>
+      </a>
+
+      <!-- Main tabs. On phones this becomes the bottom tab bar. -->
+      <nav class="tabs" aria-label="Main">
+        <a class="tab" href="#home" data-tab="home"><span class="tab__icon" aria-hidden="true">🏠</span><span class="tab__label" data-i18n="nav.home">Home</span></a>
+        <a class="tab" href="#orientation" data-tab="orientation"><span class="tab__icon" aria-hidden="true">✅</span><span class="tab__label" data-i18n="nav.orientation">Orientation</span></a>
+        <a class="tab" href="#clubs" data-tab="clubs"><span class="tab__icon" aria-hidden="true">🎯</span><span class="tab__label" data-i18n="nav.clubs">Clubs</span></a>
+        <a class="tab" href="#match" data-tab="match"><span class="tab__icon" aria-hidden="true">🤝</span><span class="tab__label" data-i18n="nav.match">Peer Match</span></a>
+        <a class="tab tab--desktop" href="#community" data-tab="community"><span class="tab__icon" aria-hidden="true">📣</span><span class="tab__label" data-i18n="nav.community">Community</span></a>
+        <a class="tab tab--desktop" href="#about" data-tab="about"><span class="tab__icon" aria-hidden="true">👋</span><span class="tab__label" data-i18n="nav.about">About</span></a>
+        <button class="tab tab--mobile" id="more-btn" aria-haspopup="true" aria-expanded="false"><span class="tab__icon" aria-hidden="true">☰</span><span class="tab__label" data-i18n="nav.more">More</span></button>
+      </nav>
+
+      <div class="topbar__actions">
+        <!-- Language selector -->
+        <label class="lang">
+          <span class="sr-only" data-i18n="nav.language">Language</span>
+          <span aria-hidden="true">🌐</span>
+          <select id="lang-select">
+            <option value="en">EN</option>
+            <option value="pt">PT</option>
+            <option value="es">ES</option>
+          </select>
+        </label>
+        <!-- Shows "Log in" or the user's initials (script.js updates it) -->
+        <a href="#account" class="account-btn" id="account-btn">
+          <span class="account-btn__avatar" id="account-avatar" hidden></span>
+          <span id="account-label" data-i18n="nav.login">Log in</span>
+        </a>
+        <a href="#early" class="btn btn--primary btn--sm topbar__cta" data-i18n="nav.early">Early access</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- "More" sheet for phones -->
+  <div class="sheet" id="more-sheet" hidden>
+    <div class="sheet__backdrop" data-close-sheet></div>
+    <div class="sheet__panel" role="menu">
+      <a href="#community" role="menuitem" data-close-sheet>📣 <span data-i18n="nav.community">Community</span></a>
+      <a href="#about" role="menuitem" data-close-sheet>👋 <span data-i18n="nav.about">About</span></a>
+      <a href="#early" role="menuitem" data-close-sheet>🚀 <span data-i18n="nav.early">Early access</span></a>
+      <a href="#account" role="menuitem" data-close-sheet>👤 <span data-i18n="nav.account">My account</span></a>
+      <a href="privacy.html" role="menuitem">🔒 <span data-i18n="footer.privacy">Privacy Policy</span></a>
+    </div>
+  </div>
+
+  <main id="app">
+
+    <!-- ===================== HOME ===================== -->
+    <section class="view" id="view-home" data-view="home">
+      <div class="hero">
+        <div class="container hero__grid">
+          <div class="hero__copy">
+            <span class="pill" data-i18n="home.pill">✈️ Built for first-years &amp; international students</span>
+            <h1 data-i18n="home.title">Your Global Campus <span class="accent">Starts Here.</span></h1>
+            <p class="lead" data-i18n="home.lead">Abroady turns an overwhelming campus into a clear path: an orientation checklist made for non-citizens, clubs that actually welcome freshmen, and peers on <strong>your exact study-abroad timeline</strong>, so you can go to Sydney in year two, not year four.</p>
+            <div class="hero__actions">
+              <a href="#early" class="btn btn--primary btn--lg" data-i18n="home.cta1">Get early access</a>
+              <a href="#match" class="btn btn--ghost btn--lg" data-i18n="home.cta2">Find my Sydney cohort →</a>
+            </div>
+            <p class="hero__note" data-i18n="home.note">Free for students · English, Português, Español</p>
+          </div>
+
+          <!-- Phone mockup -->
+          <div class="hero__visual" aria-hidden="true">
+            <div class="phone">
+              <div class="phone__head"><span class="dot"></span> <span data-i18n="home.phone.path">Your path to</span> <strong>UNSW Sydney</strong></div>
+              <div class="phone__card">
+                <div class="mini-progress"><span style="width:62%"></span></div>
+                <p><strong data-i18n="nav.orientation">Orientation</strong> · <span data-i18n="home.phone.done">5 of 8 done</span></p>
+              </div>
+              <div class="phone__card phone__card--row">
+                <span class="avatar avatar--sm" style="--h:200">LM</span>
+                <div><strong>Lucas M.</strong><br /><small data-i18n="home.phone.m1">1st year · Spring 2028 · 94% match</small></div>
+              </div>
+              <div class="phone__card phone__card--row">
+                <span class="avatar avatar--sm" style="--h:330">AK</span>
+                <div><strong>Aisha K.</strong><br /><small data-i18n="home.phone.m2">1st year · Spring 2028 · 89% match</small></div>
+              </div>
+              <div class="phone__card phone__card--accent">
+                🌏 <strong>Sydney Spring Exchange Group</strong><br />
+                <small data-i18n="home.phone.group">12 underclassmen · new message</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="container section">
+        <div class="section__head">
+          <h2 data-i18n="home.problem.title">Study abroad shouldn't feel like a senior-year secret.</h2>
+          <p data-i18n="home.problem.text">Campus directories list hundreds of resources. First-years and international students don't know which ones matter, and the study-abroad crowd is mostly juniors and seniors.</p>
+        </div>
+        <div class="feature-grid">
+          <a class="feature" href="#orientation">
+            <div class="feature__icon">✅</div>
+            <h3 data-i18n="home.f1.title">International Orientation Hub</h3>
+            <p data-i18n="home.f1.text">One checklist for visa documents, check-in, course registration rules for non-citizens and more.</p>
+            <span class="link" data-i18n="home.f1.link">Open checklist →</span>
+          </a>
+          <a class="feature" href="#clubs">
+            <div class="feature__icon">🎯</div>
+            <h3 data-i18n="home.f2.title">Smart Club Directory</h3>
+            <p data-i18n="home.f2.text">Filtered to the clubs that are freshman-friendly and welcoming to international students.</p>
+            <span class="link" data-i18n="home.f2.link">Browse clubs →</span>
+          </a>
+          <a class="feature" href="#match">
+            <div class="feature__icon">🤝</div>
+            <h3 data-i18n="home.f3.title">Peer Matching</h3>
+            <p data-i18n="home.f3.text">Meet underclassmen heading to the same exchange in the same term, and plan it together.</p>
+            <span class="link" data-i18n="home.f3.link">Find peers →</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="container section">
+        <div class="section__head"><h2 data-i18n="home.how.title">How it works</h2></div>
+        <ol class="steps">
+          <li><span class="steps__n">1</span><div><strong data-i18n="home.how.1t">Tell us your plan</strong><p data-i18n="home.how.1">Home country, year, dream destination and term.</p></div></li>
+          <li><span class="steps__n">2</span><div><strong data-i18n="home.how.2t">Get your checklist</strong><p data-i18n="home.how.2">Tasks and deadlines tailored to your visa status.</p></div></li>
+          <li><span class="steps__n">3</span><div><strong data-i18n="home.how.3t">Meet your cohort</strong><p data-i18n="home.how.3">Matched peers, clubs and a group chat for your term abroad.</p></div></li>
+        </ol>
+      </div>
+
+      <!-- REVIEWS -->
+      <div class="container section" id="reviews">
+        <div class="reviews-head">
+          <div class="section__head">
+            <h2 data-i18n="reviews.title">What students say</h2>
+            <p data-i18n="reviews.text">Tried the prototype? Tell us what worked and what didn't. Every review is read by the founder.</p>
+          </div>
+          <div class="rating-summary" id="rating-summary"></div>
+        </div>
+
+        <div class="reviews-layout">
+          <div class="review-list" id="review-list"></div>
+
+          <form class="panel form-card" id="review-form" novalidate>
+            <h3 data-i18n="reviews.form.title">Leave a review</h3>
+            <fieldset class="stars-input">
+              <legend data-i18n="reviews.form.rating">Your rating</legend>
+              <!-- Radio buttons in reverse order so CSS can light up the stars -->
+              <div class="stars-row">
+              <input type="radio" id="star5" name="rating" value="5" /><label for="star5" title="5">★</label>
+              <input type="radio" id="star4" name="rating" value="4" /><label for="star4" title="4">★</label>
+              <input type="radio" id="star3" name="rating" value="3" /><label for="star3" title="3">★</label>
+              <input type="radio" id="star2" name="rating" value="2" /><label for="star2" title="2">★</label>
+              <input type="radio" id="star1" name="rating" value="1" /><label for="star1" title="1">★</label>
+              </div>
+            </fieldset>
+            <div class="field-row">
+              <label class="field"><span data-i18n="form.name">Name</span>
+                <input type="text" id="review-name" name="name" required autocomplete="given-name" />
+              </label>
+              <label class="field"><span data-i18n="reviews.form.role">About you</span>
+                <input type="text" id="review-role" name="role" data-i18n-ph="reviews.form.rolePh" placeholder="1st-year · Brazil" />
+              </label>
+            </div>
+            <label class="field"><span data-i18n="form.email">Email (not published)</span>
+              <input type="email" id="review-email" name="email" required autocomplete="email" />
+            </label>
+            <label class="field"><span data-i18n="reviews.form.text">Your review</span>
+              <textarea id="review-text" name="text" rows="4" required maxlength="600"></textarea>
+            </label>
+            <label class="check"><input type="checkbox" id="review-consent" name="consent" required />
+              <span data-i18n="reviews.form.consent">I agree that Abroady may publish my review with my first name, and I accept the <a href="privacy.html" target="_blank">Privacy Policy</a>.</span></label>
+            <input type="text" name="_gotcha" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <p class="form-msg" role="alert"></p>
+            <button class="btn btn--primary btn--block" type="submit" data-i18n="reviews.form.submit">Send review</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="container section">
+        <div class="cta-banner">
+          <div>
+            <h2 data-i18n="home.banner.title">Be one of the first students on Abroady.</h2>
+            <p data-i18n="home.banner.text">Get notified the moment real cohorts open at your university.</p>
+          </div>
+          <a href="#early" class="btn btn--white btn--lg" data-i18n="home.cta1">Get early access</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== ORIENTATION ===================== -->
+    <section class="view" id="view-orientation" data-view="orientation">
+      <div class="container section">
+        <div class="page-head">
+          <div>
+            <h1 data-i18n="orient.title">International Orientation Hub</h1>
+            <p class="muted" data-i18n="orient.text">Your first-semester checklist, built for students on an F-1 or J-1 visa. Tick items off as you go. Your progress is saved to your account on this device.</p>
+          </div>
+          <div class="progress-card">
+            <div class="progress-card__top"><span data-i18n="orient.progress">Overall progress</span><strong id="progress-label">0%</strong></div>
+            <div class="progress"><span id="progress-bar"></span></div>
+            <small class="muted" id="progress-count"></small>
+          </div>
+        </div>
+        <p class="notice" data-i18n="orient.disclaimer">General guidance only, not legal or immigration advice. Always confirm with your university's international student office.</p>
+        <div class="checklist-grid" id="checklist-grid"></div>
+      </div>
+    </section>
+
+    <!-- ===================== CLUBS ===================== -->
+    <section class="view" id="view-clubs" data-view="clubs">
+      <div class="container section">
+        <div class="page-head">
+          <div>
+            <h1 data-i18n="clubs.title">Smart Club Directory</h1>
+            <p class="muted" data-i18n="clubs.text">Hand-picked clubs where first-years and international students actually feel at home.</p>
+          </div>
+        </div>
+        <div class="toolbar">
+          <label class="search">
+            <span aria-hidden="true">🔍</span>
+            <span class="sr-only" data-i18n="clubs.search">Search clubs</span>
+            <input type="search" id="club-search" data-i18n-ph="clubs.searchPh" placeholder="Search clubs, e.g. “Brazil”, “coding”, “Sydney”…" autocomplete="off" />
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="freshman-only" />
+            <span class="toggle__track"><span class="toggle__thumb"></span></span>
+            <span data-i18n="clubs.freshmanOnly">Freshman-friendly only</span>
+          </label>
+        </div>
+        <div class="chips" id="club-chips" role="group" aria-label="Category">
+          <button class="chip is-active" data-category="all" data-i18n="cat.all">All</button>
+          <button class="chip" data-category="Global" data-i18n="cat.Global">🌍 Global &amp; Travel</button>
+          <button class="chip" data-category="Cultural" data-i18n="cat.Cultural">🎉 Cultural</button>
+          <button class="chip" data-category="Academic" data-i18n="cat.Academic">📚 Academic</button>
+          <button class="chip" data-category="Career" data-i18n="cat.Career">💼 Career</button>
+          <button class="chip" data-category="Social" data-i18n="cat.Social">☕ Social &amp; Wellness</button>
+        </div>
+        <p class="muted results-count" id="club-count" aria-live="polite"></p>
+        <div class="club-grid" id="club-grid"></div>
+        <div class="empty" id="club-empty" hidden>
+          <p data-i18n="clubs.empty">No clubs match that search.</p>
+          <button class="btn btn--ghost btn--sm" id="club-reset" data-i18n="clubs.reset">Clear filters</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PEER MATCH ===================== -->
+    <section class="view" id="view-match" data-view="match">
+      <div class="container section">
+        <div class="page-head">
+          <div>
+            <h1 data-i18n="match.title">Peer Match</h1>
+            <p class="muted" data-i18n="match.text">Underclassmen on the same study-abroad timeline as you. Say hi, compare courses, plan housing together.</p>
+          </div>
+        </div>
+        <p class="notice" data-i18n="match.demo">Preview with demo profiles. Real matching opens with the beta.</p>
+
+        <div class="match-layout">
+          <aside class="panel match-filters">
+            <div class="me">
+              <span class="avatar" id="me-avatar" style="--h:205">?</span>
+              <div><strong id="me-name" data-i18n="match.you">You</strong><br /><small class="muted" id="me-meta" data-i18n="match.guest">Guest · log in to save your profile</small></div>
+            </div>
+            <label class="field"><span data-i18n="match.destination">Destination</span>
+              <select id="f-destination">
+                <option value="UNSW Sydney">🇦🇺 UNSW Sydney</option>
+                <option value="University of Melbourne">🇦🇺 University of Melbourne</option>
+                <option value="any" data-i18n="match.anyDest">Any destination</option>
+              </select>
+            </label>
+            <label class="field"><span data-i18n="match.term">Term abroad</span>
+              <select id="f-term">
+                <option value="Spring 2028" data-i18n="term.Spring 2028">Spring 2028</option>
+                <option value="Fall 2028" data-i18n="term.Fall 2028">Fall 2028</option>
+                <option value="any" data-i18n="match.anyTerm">Any term</option>
+              </select>
+            </label>
+            <label class="field"><span data-i18n="match.year">Year</span>
+              <select id="f-year">
+                <option value="any" data-i18n="match.years12">1st &amp; 2nd years</option>
+                <option value="1" data-i18n="match.year1">1st year only</option>
+                <option value="2" data-i18n="match.year2">2nd year only</option>
+              </select>
+            </label>
+            <button class="group-card" id="open-group">
+              🌏 <span><strong>Sydney Spring Exchange Group</strong><br /><small data-i18n="match.groupHint">Group chat · tap to open</small></span>
+            </button>
+          </aside>
+
+          <div class="match-list">
+            <p class="muted results-count" id="match-count"></p>
+            <div id="match-grid" class="match-grid"></div>
+            <div class="empty" id="match-empty" hidden><p data-i18n="match.empty">No peers match those filters yet. Try “Any term”.</p></div>
+          </div>
+
+          <aside class="panel chat" id="chat" aria-label="Chat">
+            <div class="chat__head">
+              <button class="icon-btn chat__back" id="chat-close" aria-label="Close">←</button>
+              <span class="avatar avatar--sm" id="chat-avatar">?</span>
+              <div><strong id="chat-name" data-i18n="match.select">Select a peer</strong><br /><small class="muted" id="chat-meta"></small></div>
+            </div>
+            <div class="chat__body" id="chat-body">
+              <p class="chat__placeholder" data-i18n="match.placeholder">Pick someone from the list and hit <strong>Message</strong> to start a conversation.</p>
+            </div>
+            <form class="chat__form" id="chat-form" autocomplete="off">
+              <input type="text" id="chat-input" data-i18n-ph="match.write" placeholder="Write a message…" disabled />
+              <button class="btn btn--primary btn--sm" id="chat-send" disabled data-i18n="match.send">Send</button>
+            </form>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== COMMUNITY ===================== -->
+    <section class="view" id="view-community" data-view="community">
+      <div class="container section">
+        <div class="page-head">
+          <div>
+            <span class="pill" data-i18n="comm.pill">📣 Launching with the beta</span>
+            <h1 data-i18n="comm.title">Your community, on campus and online</h1>
+            <p class="muted" data-i18n="comm.text">Abroady is more than an app. We're building an Instagram and group channels where international and first-year students meet, share tips and find events made for them.</p>
+          </div>
+        </div>
+
+        <h2 class="h-sub" data-i18n="comm.channels">Channels</h2>
+        <div class="channel-grid" id="channel-grid"></div>
+
+        <h2 class="h-sub" data-i18n="comm.events">Events we're planning</h2>
+        <div class="chips" id="event-chips" role="group" aria-label="Audience">
+          <button class="chip is-active" data-aud="all" data-i18n="cat.all">All</button>
+          <button class="chip" data-aud="intl" data-i18n="aud.intl">International students</button>
+          <button class="chip" data-aud="first" data-i18n="aud.first">First-years</button>
+          <button class="chip" data-aud="abroad" data-i18n="aud.abroad">Study abroad</button>
+        </div>
+        <div class="event-grid" id="event-grid"></div>
+
+        <form class="panel form-card form-inline" id="events-form" novalidate>
+          <div>
+            <h3 data-i18n="comm.form.title">Get event invites first</h3>
+            <p class="muted" data-i18n="comm.form.text">We'll email you when the Instagram goes live and when events open in your area.</p>
+          </div>
+          <div class="form-inline__fields">
+            <label class="field"><span data-i18n="form.emailPlain">Email</span>
+              <input type="email" id="events-email" name="email" required autocomplete="email" />
+            </label>
+            <label class="check"><input type="checkbox" id="events-consent" name="consent" required />
+              <span data-i18n="form.consent">I accept the <a href="privacy.html" target="_blank">Privacy Policy</a> and <a href="terms.html" target="_blank">Terms</a>.</span></label>
+            <input type="text" name="_gotcha" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <p class="form-msg" role="alert"></p>
+            <button class="btn btn--primary" type="submit" data-i18n="comm.form.submit">Notify me</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===================== ABOUT / GET IN TOUCH ===================== -->
+    <section class="view" id="view-about" data-view="about">
+      <div class="container section">
+        <div class="about">
+          <div class="about__photo">
+            <!-- 👉 To use your photo: add monica.jpg to the folder and replace this
+                 <div> with <img src="monica.jpg" alt="Monica Macaes" class="about__img" /> -->
+            <div class="about__initials" aria-hidden="true">MM</div>
+            <div class="about__links">
+              <a class="btn btn--ghost btn--sm" href="https://www.linkedin.com/in/monicamacaes/" target="_blank" rel="noopener">LinkedIn ↗</a>
+              <button class="btn btn--ghost btn--sm" id="copy-email" data-email="momacaes@unc.edu">momacaes@unc.edu · <span data-i18n="about.copy">Copy</span></button>
+            </div>
+          </div>
+          <div class="about__text">
+            <span class="pill" data-i18n="about.pill">👋 Meet the founder</span>
+            <h1>Monica Macaes</h1>
+            <p class="lead" data-i18n="about.lead">First-year at UNC-Chapel Hill from São Paulo, Brazil, studying Economics and Data Science. I'm building Abroady because I needed it on my first day.</p>
+            <p data-i18n="about.p1">When I arrived as an international student, the information I needed was spread across dozens of websites, and study abroad felt like something only juniors and seniors did. I wanted one clear path, and people on the same timeline as me.</p>
+            <p data-i18n="about.p2">Before Abroady, I co-founded One Step Drives All, an environmental initiative in Brazil, where I built AI apps and websites and analyzed 300+ surveys. I tutor math to students in 15+ countries, and I've pitched ideas to international panels as a global finalist in Pitch for the Future and a Top 16 finalist in the Global Youth Challenge.</p>
+            <ul class="facts">
+              <li><strong>🌎</strong> <span data-i18n="about.f1">Portuguese, English, Italian, Spanish</span></li>
+              <li><strong>💻</strong> <span data-i18n="about.f2">Python, SQL, HTML/CSS/JavaScript</span></li>
+              <li><strong>🎓</strong> <span data-i18n="about.f3">UNC-Chapel Hill, Class of 2030</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <form class="panel form-card contact-form" id="contact-form" novalidate>
+          <h2 data-i18n="about.contact.title">Get in touch</h2>
+          <p class="muted" data-i18n="about.contact.text">Students, universities, partners, judges and press: I'd love to hear from you.</p>
+          <div class="field-row">
+            <label class="field"><span data-i18n="form.name">Name</span>
+              <input type="text" id="contact-name" name="name" required autocomplete="name" />
+            </label>
+            <label class="field"><span data-i18n="form.emailPlain">Email</span>
+              <input type="email" id="contact-email" name="email" required autocomplete="email" />
+            </label>
+          </div>
+          <label class="field"><span data-i18n="about.contact.reason">I'm a…</span>
+            <select id="contact-reason" name="reason">
+              <option value="Student" data-i18n="about.r1">Student</option>
+              <option value="University / partner" data-i18n="about.r2">University or partner</option>
+              <option value="Judge / investor" data-i18n="about.r3">Judge or investor</option>
+              <option value="Press" data-i18n="about.r4">Journalist</option>
+              <option value="Other" data-i18n="about.r5">Other</option>
+            </select>
+          </label>
+          <label class="field"><span data-i18n="about.contact.message">Message</span>
+            <textarea id="contact-message" name="message" rows="5" required maxlength="2000"></textarea>
+          </label>
+          <label class="check"><input type="checkbox" id="contact-consent" name="consent" required />
+            <span data-i18n="form.consent">I accept the <a href="privacy.html" target="_blank">Privacy Policy</a> and <a href="terms.html" target="_blank">Terms</a>.</span></label>
+          <input type="text" name="_gotcha" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+          <p class="form-msg" role="alert"></p>
+          <button class="btn btn--primary" type="submit" data-i18n="about.contact.submit">Send message</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===================== EARLY ACCESS / COMING SOON ===================== -->
+    <section class="view" id="view-early" data-view="early">
+      <div class="container section">
+        <div class="early">
+          <div class="early__copy">
+            <span class="pill" data-i18n="early.pill">🚀 Coming soon</span>
+            <h1 data-i18n="early.title">Get notified when Abroady is ready</h1>
+            <p class="lead" data-i18n="early.lead">Join the early-access list. You'll get an invite when real cohorts open at your university, plus a say in what we build next.</p>
+            <ul class="perks">
+              <li data-i18n="early.perk1">First invite to your destination cohort</li>
+              <li data-i18n="early.perk2">Vote on the next features</li>
+              <li data-i18n="early.perk3">Free for students, always</li>
+            </ul>
+          </div>
+
+          <form class="panel form-card" id="early-form" novalidate>
+            <h2 data-i18n="early.form.title">Join the early-access list</h2>
+            <div class="field-row">
+              <label class="field"><span data-i18n="form.name">Name</span>
+                <input type="text" id="early-name" name="name" required autocomplete="given-name" />
+              </label>
+              <label class="field"><span data-i18n="form.emailPlain">Email</span>
+                <input type="email" id="early-email" name="email" required autocomplete="email" />
+              </label>
+            </div>
+            <div class="field-row">
+              <label class="field"><span data-i18n="form.university">University</span>
+                <input type="text" id="early-uni" name="university" placeholder="UNC-Chapel Hill" />
+              </label>
+              <label class="field"><span data-i18n="form.year">Year</span>
+                <select id="early-year" name="year">
+                  <option value="1st year" data-i18n="year.1">1st year</option>
+                  <option value="2nd year" data-i18n="year.2">2nd year</option>
+                  <option value="3rd year+" data-i18n="year.3">3rd year+</option>
+                  <option value="Incoming" data-i18n="year.0">Starting next year</option>
+                </select>
+              </label>
+            </div>
+            <label class="field"><span data-i18n="form.destination">Dream destination</span>
+              <select id="early-dest" name="destination">
+                <option value="UNSW Sydney">UNSW Sydney</option>
+                <option value="Europe" data-i18n="dest.europe">Europe</option>
+                <option value="Asia" data-i18n="dest.asia">Asia</option>
+                <option value="Latin America" data-i18n="dest.latam">Latin America</option>
+                <option value="Not sure yet" data-i18n="dest.unsure">Not sure yet</option>
+              </select>
+            </label>
+            <label class="check"><input type="checkbox" id="early-intl" name="international" /> <span data-i18n="form.intl">I'm an international student</span></label>
+            <label class="check"><input type="checkbox" id="early-consent" name="consent" required />
+              <span data-i18n="form.consent">I accept the <a href="privacy.html" target="_blank">Privacy Policy</a> and <a href="terms.html" target="_blank">Terms</a>.</span></label>
+            <input type="text" name="_gotcha" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <p class="form-msg" role="alert"></p>
+            <button class="btn btn--primary btn--block" type="submit" data-i18n="early.form.submit">Notify me when it's ready</button>
+          </form>
+        </div>
+
+        <h2 class="h-sub" data-i18n="early.roadmap">What's live and what's coming</h2>
+        <div class="roadmap" id="roadmap"></div>
+      </div>
+    </section>
+
+    <!-- ===================== ACCOUNT (LOG IN / SIGN UP / PROFILE) ===================== -->
+    <section class="view" id="view-account" data-view="account">
+      <div class="container section account-wrap">
+
+        <!-- Logged out: log in / create account -->
+        <div class="panel form-card auth" id="auth-card">
+          <img src="logo.png" alt="" class="auth__logo" width="70" height="57" />
+          <div class="segmented" role="tablist">
+            <button role="tab" class="is-active" data-auth="login" data-i18n="auth.login">Log in</button>
+            <button role="tab" data-auth="signup" data-i18n="auth.signup">Create account</button>
+          </div>
+
+          <form id="login-form" novalidate>
+            <label class="field"><span data-i18n="form.emailPlain">Email</span>
+              <input type="email" id="login-email" name="email" required autocomplete="email" />
+            </label>
+            <label class="field"><span data-i18n="auth.password">Password</span>
+              <input type="password" id="login-password" name="password" required autocomplete="current-password" />
+            </label>
+            <p class="form-msg" role="alert"></p>
+            <button class="btn btn--primary btn--block" type="submit" data-i18n="auth.login">Log in</button>
+          </form>
+
+          <form id="signup-form" novalidate hidden>
+            <div class="field-row">
+              <label class="field"><span data-i18n="form.name">Name</span>
+                <input type="text" id="signup-name" name="name" required autocomplete="name" />
+              </label>
+              <label class="field"><span data-i18n="auth.country">Home country</span>
+                <input type="text" id="signup-country" name="country" autocomplete="country-name" />
+              </label>
+            </div>
+            <label class="field"><span data-i18n="form.emailPlain">Email</span>
+              <input type="email" id="signup-email" name="email" required autocomplete="email" />
+            </label>
+            <label class="field"><span data-i18n="auth.passwordNew">Password (8+ characters)</span>
+              <input type="password" id="signup-password" name="password" required minlength="8" autocomplete="new-password" />
+            </label>
+            <div class="field-row">
+              <label class="field"><span data-i18n="form.year">Year</span>
+                <select id="signup-year" name="year">
+                  <option value="1" data-i18n="year.1">1st year</option>
+                  <option value="2" data-i18n="year.2">2nd year</option>
+                  <option value="3" data-i18n="year.3">3rd year+</option>
+                </select>
+              </label>
+              <label class="field"><span data-i18n="match.term">Term abroad</span>
+                <select id="signup-term" name="term">
+                  <option value="Spring 2028" data-i18n="term.Spring 2028">Spring 2028</option>
+                  <option value="Fall 2028" data-i18n="term.Fall 2028">Fall 2028</option>
+                  <option value="Not sure" data-i18n="dest.unsure">Not sure yet</option>
+                </select>
+              </label>
+            </div>
+            <label class="check"><input type="checkbox" id="signup-intl" name="international" /> <span data-i18n="form.intl">I'm an international student</span></label>
+            <label class="check"><input type="checkbox" id="signup-consent" name="consent" required />
+              <span data-i18n="form.consent">I accept the <a href="privacy.html" target="_blank">Privacy Policy</a> and <a href="terms.html" target="_blank">Terms</a>.</span></label>
+            <p class="form-msg" role="alert"></p>
+            <button class="btn btn--primary btn--block" type="submit" data-i18n="auth.signup">Create account</button>
+          </form>
+          <p class="fine" data-i18n="auth.note">During the prototype, your account and progress are saved privately in this browser. Cloud accounts that work on every device arrive with the beta.</p>
+        </div>
+
+        <!-- Logged in: profile -->
+        <div class="panel form-card profile" id="profile-card" hidden>
+          <div class="profile__head">
+            <span class="avatar avatar--lg" id="profile-avatar">?</span>
+            <div>
+              <h1 id="profile-title">Hi!</h1>
+              <p class="muted" id="profile-email"></p>
+            </div>
+          </div>
+          <div class="profile__stats">
+            <div><strong id="stat-checklist">0%</strong><span data-i18n="profile.checklist">checklist done</span></div>
+            <div><strong id="stat-clubs">0</strong><span data-i18n="profile.clubs">clubs joined</span></div>
+            <div><strong id="stat-term">—</strong><span data-i18n="profile.term">term abroad</span></div>
+          </div>
+          <form id="profile-form" novalidate>
+            <div class="field-row">
+              <label class="field"><span data-i18n="form.name">Name</span><input type="text" id="profile-name" name="name" required /></label>
+              <label class="field"><span data-i18n="auth.country">Home country</span><input type="text" id="profile-country" name="country" /></label>
+            </div>
+            <div class="field-row">
+              <label class="field"><span data-i18n="form.year">Year</span>
+                <select id="profile-year" name="year">
+                  <option value="1" data-i18n="year.1">1st year</option>
+                  <option value="2" data-i18n="year.2">2nd year</option>
+                  <option value="3" data-i18n="year.3">3rd year+</option>
+                </select>
+              </label>
+              <label class="field"><span data-i18n="match.term">Term abroad</span>
+                <select id="profile-term" name="term">
+                  <option value="Spring 2028" data-i18n="term.Spring 2028">Spring 2028</option>
+                  <option value="Fall 2028" data-i18n="term.Fall 2028">Fall 2028</option>
+                  <option value="Not sure" data-i18n="dest.unsure">Not sure yet</option>
+                </select>
+              </label>
+            </div>
+            <p class="form-msg" role="alert"></p>
+            <div class="profile__actions">
+              <button class="btn btn--primary" type="submit" data-i18n="profile.save">Save changes</button>
+              <button class="btn btn--ghost" type="button" id="logout-btn" data-i18n="profile.logout">Log out</button>
+            </div>
+          </form>
+          <div class="danger">
+            <button class="link-btn" type="button" id="delete-btn" data-i18n="profile.delete">Delete my account and data</button>
+            <div class="danger__confirm" id="delete-confirm" hidden>
+              <p data-i18n="profile.deleteConfirm">This removes your account and progress from this browser. This can't be undone.</p>
+              <button class="btn btn--danger btn--sm" type="button" id="delete-yes" data-i18n="profile.deleteYes">Yes, delete</button>
+              <button class="btn btn--ghost btn--sm" type="button" id="delete-no" data-i18n="profile.cancel">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <img src="logo.png" alt="" width="40" height="33" />
+        <div>
+          <strong>Abroady</strong>
+          <p data-i18n="footer.tag">Built by a first-year, for first-years.</p>
+        </div>
+      </div>
+      <nav class="footer__links" aria-label="Footer">
+        <a href="#community" data-i18n="nav.community">Community</a>
+        <a href="#about" data-i18n="footer.contact">Contact</a>
+        <a href="privacy.html" data-i18n="footer.privacy">Privacy Policy</a>
+        <a href="cookies.html" data-i18n="footer.cookies">Cookie Policy</a>
+        <a href="terms.html" data-i18n="footer.terms">Terms of Use</a>
+        <button class="link-btn" id="cookie-settings" data-i18n="footer.cookieSettings">Cookie settings</button>
+      </nav>
+    </div>
+    <div class="container">
+      <p class="footer__fine" data-i18n="footer.fine">Prototype. Clubs, people and messages shown are demo data. Abroady is an independent student project and is not affiliated with or endorsed by UNC-Chapel Hill or UNSW Sydney.</p>
+    </div>
+  </footer>
+
+  <!-- ===================== COOKIE / PRIVACY BANNER =====================
+       Appears after the visitor scrolls down (script.js). -->
+  <div class="consent" id="consent" role="dialog" aria-labelledby="consent-title" hidden>
+    <div class="consent__text">
+      <strong id="consent-title" data-i18n="consent.title">🍪 Privacy &amp; cookies</strong>
+      <p data-i18n="consent.text">We use essential browser storage to keep you logged in and save your progress. With your OK, we also load fonts from Google. We never use advertising or tracking cookies. By using Abroady you agree to our <a href="privacy.html">Privacy Policy</a>, <a href="cookies.html">Cookie Policy</a> and <a href="terms.html">Terms</a>.</p>
+    </div>
+    <div class="consent__actions">
+      <button class="btn btn--ghost btn--sm" id="consent-essential" data-i18n="consent.essential">Essential only</button>
+      <button class="btn btn--primary btn--sm" id="consent-all" data-i18n="consent.all">Accept all</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- Order matters: content and translations first, then the app logic -->
+  <script src="data.js"></script>
+  <script src="i18n.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

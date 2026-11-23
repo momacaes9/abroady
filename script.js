@@ -2,7 +2,7 @@
    ABROADY — script.js  (app logic, vanilla JavaScript)
 
    Sections:
-     0. CONFIG       — your Formspree address lives here
+     0. CONFIG       — Formspree address (Supabase keys live in config.js)
      1. HELPERS      — storage, toasts, escaping
      2. LANGUAGE     — EN / PT / ES switching
      3. ACCOUNTS     — create account, log in, saved progress per user
@@ -13,7 +13,7 @@
      8. COMMUNITY    — channels + planned events
      9. EARLY ACCESS — coming-soon roadmap
     10. REVIEWS      — list + rating summary
-    11. FORMS        — every form sends to Formspree (lands in your email)
+    11. FORMS        — every form saves to Supabase (+ optional Formspree email copy)
     12. PROFILE      — edit, log out, delete
     13. CONSENT      — cookie / privacy banner shown on scroll
     14. START        — runs everything
@@ -128,15 +128,51 @@ function initLanguage() {
 }
 
 /* ==========================================================================
-   3. ACCOUNTS (prototype: saved in this browser only)
-   Passwords are never stored in plain text: we store a salted SHA-256 hash.
-   👉 For real accounts across devices, the next step is a service such as
-      Firebase Authentication or Supabase Auth.
+   3. ACCOUNTS
+   With Supabase configured (config.js): real accounts via Supabase Auth,
+   profile + progress synced across devices (see backend.js).
+   Without it (prototype mode): accounts saved in this browser only, passwords
+   stored as a salted SHA-256 hash, never in plain text.
    ========================================================================== */
+const REMOTE = window.backend && window.backend.enabled;
+let remoteUser = null; // logged-in Supabase user (REMOTE mode only)
+
 const getUsers = () => store.get("users", {});
 const saveUsers = (users) => store.set("users", users);
-const currentEmail = () => store.get("session", null);
-const currentUser = () => { const e = currentEmail(); return e ? getUsers()[e] || null : null; };
+const currentEmail = () => (REMOTE ? remoteUser?.email || null : store.get("session", null));
+const currentUser = () => {
+  if (REMOTE) return remoteUser;
+  const e = currentEmail(); return e ? getUsers()[e] || null : null;
+};
+
+// Push checklist + clubs to Supabase (debounced so fast clicking = one request)
+let syncTimer;
+function syncProgress() {
+  if (!REMOTE || !remoteUser) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    backend.saveProgress(remoteUser.id, { checklist: [...doneTasks], joined: [...joinedClubs] }).catch(() => {});
+  }, 600);
+}
+
+// Load the Supabase session + profile, and merge cloud progress with this device
+async function refreshRemoteUser() {
+  if (!REMOTE) return;
+  try { remoteUser = await backend.currentUser(); } catch { remoteUser = null; }
+  if (!remoteUser) return;
+  adoptGuestData(remoteUser.email);
+  const cloud = await backend.loadProgress(remoteUser.id).catch(() => null);
+  const local = { checklist: store.get(`data:${remoteUser.email}:checklist`, []), joined: store.get(`data:${remoteUser.email}:joined`, []) };
+  const merged = {
+    checklist: [...new Set([...(cloud?.checklist || []), ...local.checklist])],
+    joined: [...new Set([...(cloud?.joined || []), ...local.joined])],
+  };
+  store.set(`data:${remoteUser.email}:checklist`, merged.checklist);
+  store.set(`data:${remoteUser.email}:joined`, merged.joined);
+  if (!cloud || merged.checklist.length !== cloud.checklist.length || merged.joined.length !== cloud.joined.length) {
+    backend.saveProgress(remoteUser.id, merged).catch(() => {});
+  }
+}
 
 // Each user (or the guest) gets their own saved checklist / clubs
 const userKey = (name) => `data:${currentEmail() || "guest"}:${name}`;
@@ -160,7 +196,8 @@ function adoptGuestData(email) {
   });
 }
 
-function onAuthChange() {
+async function onAuthChange() {
+  if (REMOTE) await refreshRemoteUser();
   loadUserData();
   updateAccountUI();
   renderAll();
@@ -216,6 +253,29 @@ function initAuth() {
     if (!isEmail(email)) return showMsg(msg, T("errEmail"));
     if (f.password.value.length < 8) return showMsg(msg, T("errPassword"));
     if (!f.consent.checked) return showMsg(msg, T("errConsent"));
+
+    if (REMOTE) {
+      const button = $("button[type=submit]", f), label = button.innerHTML;
+      button.disabled = true; button.textContent = T("sending");
+      try {
+        const profile = { name: f.name.value.trim(), country: f.country.value.trim(), year: f.year.value, term: f.term.value, international: f.international.checked };
+        const res = await backend.signUp({ email, password: f.password.value, ...profile, consentVersion: POLICY_VERSION, language: lang });
+        adoptGuestData(email);
+        f.reset();
+        if (res.needsConfirmation) showMsg(msg, T("checkEmail"), true);
+        else { showMsg(msg, ""); toast(T("welcome", { name: profile.name.split(" ")[0] })); await onAuthChange(); }
+        notifyFounder({
+          _subject: `🎓 New Abroady account: ${profile.name}`,
+          "Form": "New account", "Name": profile.name, "email": email,
+          "Home country": profile.country || "—", "Year": T("year" + profile.year), "Term abroad": profile.term,
+          "International student": profile.international ? "Yes" : "No",
+        });
+      } catch (err) {
+        showMsg(msg, /registered|exists/i.test(err.message || "") ? T("errExists") : /password/i.test(err.message || "") ? T("errPassword") : T("errServer"));
+      } finally { button.disabled = false; button.innerHTML = label; }
+      return;
+    }
+
     const users = getUsers();
     if (users[email]) return showMsg(msg, T("errExists"));
 
@@ -247,6 +307,14 @@ function initAuth() {
     e.preventDefault();
     const f = e.target, msg = $(".form-msg", f);
     const email = f.email.value.trim().toLowerCase();
+    if (REMOTE) {
+      try { await backend.signIn(email, f.password.value); }
+      catch (err) { return showMsg(msg, /confirm/i.test(err.message || "") ? T("checkEmail") : T("errLogin")); }
+      showMsg(msg, ""); f.reset();
+      await onAuthChange();
+      if (remoteUser) toast(T("welcomeBack", { name: remoteUser.name.split(" ")[0] }));
+      return;
+    }
     const user = getUsers()[email];
     if (!user || (await hashPassword(f.password.value, user.salt)) !== user.hash) return showMsg(msg, T("errLogin"));
     store.set("session", email);
@@ -339,6 +407,7 @@ function initChecklist() {
     if (!id) return;
     e.target.checked ? doneTasks.add(id) : doneTasks.delete(id);
     store.set(userKey("checklist"), [...doneTasks]);
+    syncProgress();
     renderChecklist();
     if (doneTasks.size === totalTasks()) toast(T("allDone"));
   });
@@ -402,6 +471,7 @@ function initClubs() {
     if (joinedClubs.has(name)) { joinedClubs.delete(name); toast(T("leftToast", { name })); }
     else { joinedClubs.add(name); toast(T("joinedToast", { name })); }
     store.set(userKey("joined"), [...joinedClubs]);
+    syncProgress();
     renderClubs();
   });
   $("#club-reset").addEventListener("click", () => {
@@ -418,13 +488,39 @@ function initClubs() {
 const conversations = {};
 let activeChat = null;
 
+// Real students from Supabase with the same term (logged-in users only).
+let realPeers = [];
+async function loadRealPeers() {
+  const user = currentUser();
+  if (!REMOTE || !user) { realPeers = []; return; }
+  const term = $("#f-term").value !== "any" ? $("#f-term").value : user.term;
+  realPeers = await backend.matchPeers(term).catch(() => []);
+}
+
+function realPeerCard(p) {
+  const hue = (p.display_name.length * 53) % 360;
+  return `
+    <article class="panel peer peer--real">
+      <span class="avatar" style="--h:${hue}">${escapeHTML(initialsOf(p.display_name))}</span>
+      <div class="peer__info">
+        <h3>${escapeHTML(p.display_name)}</h3>
+        <p class="peer__meta">${T("year" + (p.year || 1))}${p.country ? " · " + escapeHTML(p.country) : ""}<br />→ ${escapeHTML(p.destination || "")}${p.destination ? ", " : ""}${escapeHTML(termLabel(p.term))}</p>
+        <div class="peer__tags"><span class="tag tag--green">${T("realPeer")}</span>${p.international ? `<span class="tag tag--blue">${T("intl")}</span>` : ""}</div>
+      </div>
+      <div class="peer__side">
+        <button class="btn btn--ghost btn--sm" data-real-peer>${T("message")}</button>
+      </div>
+    </article>`;
+}
+
 function renderMatches() {
   const dest = $("#f-destination").value, term = $("#f-term").value, year = $("#f-year").value;
   const results = PEERS
     .filter((p) => (dest === "any" || p.destination === dest) && (term === "any" || p.term === term) && (year === "any" || p.year === year))
     .sort((a, b) => b.score - a.score);
 
-  $("#match-grid").innerHTML = results.map((p) => `
+  const real = realPeers.filter((p) => (term === "any" || p.term === term) && (year === "any" || p.year === year));
+  $("#match-grid").innerHTML = real.map(realPeerCard).join("") + results.map((p) => `
     <article class="panel peer">
       <span class="avatar" style="--h:${p.hue}">${p.initials}</span>
       <div class="peer__info">
@@ -438,8 +534,9 @@ function renderMatches() {
       </div>
     </article>`).join("");
 
-  $("#match-count").textContent = results.length === 1 ? T("peerFound") : T("peersFound", { n: results.length });
-  $("#match-empty").hidden = results.length > 0;
+  const n = results.length + real.length;
+  $("#match-count").textContent = n === 1 ? T("peerFound") : T("peersFound", { n });
+  $("#match-empty").hidden = n > 0;
 }
 
 function renderChat() {
@@ -509,8 +606,10 @@ function sendChatMessage(text) {
 }
 
 function initMatch() {
-  ["#f-destination", "#f-term", "#f-year"].forEach((s) => $(s).addEventListener("change", renderMatches));
+  ["#f-destination", "#f-year"].forEach((s) => $(s).addEventListener("change", renderMatches));
+  $("#f-term").addEventListener("change", async () => { await loadRealPeers(); renderMatches(); });
   $("#match-grid").addEventListener("click", (e) => {
+    if (e.target.closest("[data-real-peer]")) return toast(T("realSoon"));
     const btn = e.target.closest("[data-message]"); if (!btn) return;
     openChat(PEERS.find((p) => p.id === btn.dataset.message));
   });
@@ -586,9 +685,14 @@ function renderRoadmap() {
    ========================================================================== */
 const stars = (n) => "★★★★★".slice(0, n) + "☆☆☆☆☆".slice(0, 5 - n);
 
+let cloudReviews = [];
+async function loadCloudReviews() {
+  if (REMOTE) cloudReviews = await backend.approvedReviews().catch(() => []);
+}
+
 function renderReviews() {
   const mine = store.get("myReviews", []);
-  const approved = APPROVED_REVIEWS;
+  const approved = [...cloudReviews, ...APPROVED_REVIEWS];
   const all = [...mine.map((r) => ({ ...r, pending: true })), ...approved];
 
   // Summary (average of approved reviews only)
@@ -616,8 +720,15 @@ function renderReviews() {
 }
 
 /* ==========================================================================
-   11. FORMS → FORMSPREE
+   11. FORMS → SUPABASE (+ Formspree email copy)
    ========================================================================== */
+// Email copy to the founder inbox. Never blocks or breaks the form.
+function notifyFounder(fields) {
+  const cfg = window.ABROADY_CONFIG || {};
+  if (REMOTE && cfg.FORMSPREE_COPY === false) return;
+  sendToFormspree(fields).catch(() => {});
+}
+
 async function sendToFormspree(fields) {
   const payload = {
     ...fields,
@@ -640,8 +751,9 @@ function showMsg(el, text, ok = false) {
 }
 
 /* Connects one form: validates, sends, shows success.
-   build(form) returns the fields to email (or a string error message). */
-function wireForm(formId, { build, okKey, after }) {
+   build(form) returns the fields to email (or a string error message).
+   table + row(form, fields) save the submission to Supabase when configured. */
+function wireForm(formId, { build, okKey, after, table, row }) {
   const form = $("#" + formId);
   const msg = $(".form-msg", form);
   const button = $("button[type=submit]", form);
@@ -667,7 +779,12 @@ function wireForm(formId, { build, okKey, after }) {
     button.textContent = T("sending");
     showMsg(msg, "");
     try {
-      await sendToFormspree(fields);
+      if (REMOTE && table) {
+        await backend.insert(table, { ...row(form, fields), language: lang });
+        notifyFounder(fields);
+      } else {
+        await sendToFormspree(fields);
+      }
       showMsg(msg, T(okKey), true);
       after && after(form, fields);
       form.reset();
@@ -684,6 +801,12 @@ function initForms() {
   // Early access / get notified
   wireForm("early-form", {
     okKey: "okEarly",
+    table: "early_access",
+    row: (f) => ({
+      name: f.name.value.trim(), email: f.email.value.trim().toLowerCase(), university: f.university.value.trim() || null,
+      year: f.year.value, destination: f.destination.value, international: f.international.checked,
+      source: (new URLSearchParams(location.search).get("ref") || document.referrer || "direct").slice(0, 200),
+    }),
     build: (f) => ({
       _subject: `🚀 Early access: ${f.name.value.trim()} (${f.destination.value})`,
       "Form": "Early access", "Name": f.name.value.trim(), "email": f.email.value.trim(),
@@ -696,6 +819,8 @@ function initForms() {
   // Get in touch
   wireForm("contact-form", {
     okKey: "okContact",
+    table: "contact_messages",
+    row: (f) => ({ name: f.name.value.trim(), email: f.email.value.trim().toLowerCase(), reason: f.reason.value, message: f.message.value.trim() }),
     build: (f) => ({
       _subject: `✉️ New message from ${f.name.value.trim()} (${f.reason.value})`,
       "Form": "Get in touch", "Name": f.name.value.trim(), "email": f.email.value.trim(),
@@ -707,6 +832,8 @@ function initForms() {
   // Event updates
   wireForm("events-form", {
     okKey: "okEvents",
+    table: "event_subscribers",
+    row: (f) => ({ email: f.email.value.trim().toLowerCase() }),
     build: (f) => ({
       _subject: "📣 New event-updates subscriber",
       "Form": "Community & events updates", "email": f.email.value.trim(),
@@ -717,6 +844,11 @@ function initForms() {
   // Reviews
   wireForm("review-form", {
     okKey: "okReview",
+    table: "reviews",
+    row: (f, fields) => ({
+      name: fields["Name"], role: f.role.value.trim() || null, email: f.email.value.trim().toLowerCase(),
+      rating: Number(fields["Rating"].match(/\((\d)/)[1]), text: fields["Review"],
+    }),
     build: (f) => {
       const rating = Number((f.querySelector("input[name=rating]:checked") || {}).value || 0);
       if (!rating) return T("errRating");
@@ -725,7 +857,7 @@ function initForms() {
         "Form": "Review", "Rating": `${stars(rating)} (${rating}/5)`, "Name": f.name.value.trim(),
         "About them": f.role.value.trim() || "—", "email": f.email.value.trim(), "Review": f.text.value.trim(),
         "Agreed to publication": "Yes",
-        "To publish": "Copy this review into APPROVED_REVIEWS in data.js",
+        "To publish": REMOTE ? "Supabase → reviews table → set status to 'approved'" : "Copy this review into APPROVED_REVIEWS in data.js",
       };
     },
     after: (f, fields) => {
@@ -762,21 +894,37 @@ function renderProfile() {
 }
 
 function initProfile() {
-  $("#profile-form").addEventListener("submit", (e) => {
+  $("#profile-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = e.target, users = getUsers(), email = currentEmail();
     if (!f.name.value.trim()) return showMsg($(".form-msg", f), T("errRequired"));
+    if (REMOTE) {
+      const fields = { name: f.name.value.trim(), country: f.country.value.trim(), year: f.year.value, term: f.term.value };
+      try { await backend.updateProfile(remoteUser.id, fields); }
+      catch { return showMsg($(".form-msg", f), T("errServer")); }
+      Object.assign(remoteUser, fields);
+      showMsg($(".form-msg", f), ""); toast(T("saved")); updateAccountUI();
+      await loadRealPeers(); renderMatches();
+      return;
+    }
     Object.assign(users[email], { name: f.name.value.trim(), country: f.country.value.trim(), year: f.year.value, term: f.term.value });
     saveUsers(users);
     showMsg($(".form-msg", f), "");
     toast(T("saved"));
     updateAccountUI();
   });
-  $("#logout-btn").addEventListener("click", () => { store.remove("session"); toast(T("loggedOut")); onAuthChange(); });
+  $("#logout-btn").addEventListener("click", async () => {
+    if (REMOTE) { await backend.signOut(); remoteUser = null; }
+    store.remove("session"); toast(T("loggedOut")); onAuthChange();
+  });
   $("#delete-btn").addEventListener("click", () => { $("#delete-confirm").hidden = false; });
   $("#delete-no").addEventListener("click", () => { $("#delete-confirm").hidden = true; });
-  $("#delete-yes").addEventListener("click", () => {
+  $("#delete-yes").addEventListener("click", async () => {
     const email = currentEmail(), users = getUsers();
+    if (REMOTE) {
+      try { await backend.deleteAccount(); } catch { return toast(T("errServer")); }
+      remoteUser = null;
+    }
     delete users[email]; saveUsers(users);
     store.remove(`data:${email}:checklist`); store.remove(`data:${email}:joined`); store.remove("session");
     $("#delete-confirm").hidden = true;
@@ -857,4 +1005,14 @@ initCommunity();
 initForms();
 initProfile();
 initConsent();
+
+// Supabase: restore the session, then pull real peers + approved reviews
+if (REMOTE) {
+  backend.onAuthChange(async () => { await onAuthChange(); await loadRealPeers(); renderMatches(); });
+  (async () => {
+    await Promise.all([onAuthChange(), loadCloudReviews()]);
+    await loadRealPeers();
+    renderAll();
+  })();
+}
 renderAll();

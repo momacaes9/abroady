@@ -129,10 +129,19 @@ struct ChecklistGroup: Identifiable, Hashable {
     var id: String { title }
 }
 
-/// Terms students pick for study abroad. Rolling 3-year window.
+/// Terms students pick for study abroad: the current term plus the next ~3 years.
 enum Terms {
     static var upcoming: [String] {
-        let year = Calendar.current.component(.year, from: Date())
-        return (year...(year + 3)).flatMap { ["Spring \($0)", "Summer \($0)", "Fall \($0)"] }
+        let calendar = Calendar.current
+        let now = Date()
+        let year = calendar.component(.year, from: now)
+        let starts = [("Spring", 1), ("Summer", 5), ("Fall", 8)]
+        let cutoff = now.addingTimeInterval(-120 * 86_400) // keep a term that started in the last ~4 months
+        return (year...(year + 3)).flatMap { y in
+            starts.compactMap { name, month -> String? in
+                guard let start = calendar.date(from: DateComponents(year: y, month: month, day: 1)), start >= cutoff else { return nil }
+                return "\(name) \(y)"
+            }
+        }
     }
 }

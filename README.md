@@ -92,6 +92,10 @@ Real accounts, cross-device progress, and every form stored in Postgres. Schema 
 To publish a review: Table editor → `reviews` → set `status` to `approved`.
 Funding plan: see [FUNDING.md](FUNDING.md).
 
+## iOS app
+
+Native SwiftUI app in [`ios/`](ios/README.md): cohorts by destination + term, verified ambassadors, university-linked campus events. Same Supabase backend. App Store prep: [`ios/APP_STORE_CHECKLIST.md`](ios/APP_STORE_CHECKLIST.md).
+
 ## Publish on Netlify (free, ~2 minutes)
 1. Unzip this folder.
 2. Go to https://app.netlify.com/drop and log in (free account).

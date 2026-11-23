@@ -58,8 +58,8 @@ Deploy
 Drag the folder onto Netlify Drop, or connect this repo for automatic deploys on every push to main.
 
 Roadmap
- Real authentication and a database (Supabase or Firebase) to replace localStorage
- Peer matching on real profiles, with a documented scoring algorithm
+ ✅ Real authentication and a database (Supabase), with localStorage fallback
+ ✅ Peer matching on real profiles (same term, first name + initial only); scoring algorithm next
  Automated tests and Lighthouse/accessibility checks in GitHub Actions
  University-specific orientation checklists beyond UNC
 Status
@@ -69,6 +69,33 @@ Prototype / early access. Peer profiles and chat are demo data. Club data is ill
 Contact
 
 Monica Macaes · momacaes@unc.edu
+## Backend: Supabase
+
+Real accounts, cross-device progress, and every form stored in Postgres. Schema + Row Level Security: `supabase/migrations/20261122000000_init.sql`.
+
+| Table / function | What it holds | Who can access |
+|---|---|---|
+| `profiles` | name, country, year, term, destination, international | owner only (auto-created on sign-up) |
+| `user_progress` | checklist + joined clubs | owner only |
+| `early_access`, `contact_messages`, `event_subscribers` | form submissions | anyone can insert, nobody can read via API |
+| `reviews` → `approved_reviews` view | reviews, moderated | insert as `pending`; view shows approved only, no emails |
+| `match_peers(term)` | real peers, first name + initial | logged-in users only |
+| `delete_my_account()` | right to delete | the user themself |
+| `traction` view | sign-up / account counts for pitches | dashboard only |
+
+**Setup (5 min)**
+1. Create a Supabase project → SQL editor → paste and run the migration file.
+2. Project Settings → API → copy the URL and publishable (anon) key into `config.js`.
+3. Authentication → URL configuration → set Site URL to `https://abroady.netlify.app`.
+4. Deploy. Without keys in `config.js`, the site runs in prototype mode (localStorage + Formspree).
+
+To publish a review: Table editor → `reviews` → set `status` to `approved`.
+Funding plan: see [FUNDING.md](FUNDING.md).
+
+## iOS app
+
+Native SwiftUI app in [`ios/`](ios/README.md): cohorts by destination + term, verified ambassadors, university-linked campus events. Same Supabase backend. App Store prep: [`ios/APP_STORE_CHECKLIST.md`](ios/APP_STORE_CHECKLIST.md).
+
 ## Publish on Netlify (free, ~2 minutes)
 1. Unzip this folder.
 2. Go to https://app.netlify.com/drop and log in (free account).
@@ -98,6 +125,6 @@ Google usually shows the logo within days to a few weeks.
 - Policies: `privacy.html`, `cookies.html`, `terms.html`.
 
 ## Files
-index.html · styles.css · data.js · i18n.js · script.js · privacy.html · cookies.html · terms.html ·
+index.html · styles.css · data.js · i18n.js · script.js · config.js · backend.js · supabase/migrations/ · privacy.html · cookies.html · terms.html ·
 logo.png · favicon.ico · favicon-48x48.png · favicon-96x96.png · apple-touch-icon.png · icon-192.png · icon-512.png ·
 og-image.png · site.webmanifest · robots.txt · sitemap.xml · _headers

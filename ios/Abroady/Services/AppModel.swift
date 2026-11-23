@@ -200,8 +200,8 @@ final class AppModel {
     func messages(in cohort: UUID) async throws -> [ChatMessage] {
         let all: [ChatMessage]
         if let api {
-            all = try await api.select("messages?cohort_id=eq.\(cohort)&select=id,cohort_id,user_id,display_name,verified,body,created_at&order=created_at.desc&limit=150")
-                .reversed()
+            let newestFirst: [ChatMessage] = try await api.select("messages?cohort_id=eq.\(cohort)&select=id,cohort_id,user_id,display_name,verified,body,created_at&order=created_at.desc&limit=150")
+            all = newestFirst.reversed()
         } else {
             all = demoMessages[cohort] ?? SampleData.messages(cohort)
         }
